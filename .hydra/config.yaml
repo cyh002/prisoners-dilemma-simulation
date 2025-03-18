@@ -6,10 +6,10 @@ strategies:
 - Grudger
 - Joss
 - TitForTwoTats
-- QLearningAgent1
-- HumanStrategy
+- QLearningAgent
+- LocalLLMAgent
 - MetaAgent
-rounds: 200
+rounds: 10
 rounds_random: false
 min_rounds: 150
 max_rounds: 250
@@ -20,7 +20,7 @@ payoff_matrix:
   DC: 5
   DD: 1
 dynamic_payoffs: true
-noise: 0.2
+noise: 0.05
 shock_frequency: 0.02
 shock_duration: 20
 reputation_weight: 0.5
@@ -28,14 +28,21 @@ rl_params:
   learning_rate: 0.1
   discount_factor: 0.9
   exploration_rate: 0.2
-llm_params:
-  use_api: false
-  api_key: ''
-  model: local_model
+remote_llm_params:
+  use_api: true
+  provider: openai
+  model: gpt-4o-mini
   temperature: 0.5
   extended_prompt: true
+  reward_visibility: both
+  api_base: null
+local_llm_params:
+  model: SeaLLMs/SeaLLMs-v3-1.5B-Chat
+  endpoint: http://localhost:8000
+  temperature: 0.5
+  extended_prompt: true
+  reward_visibility: both
 meta_agent:
-  enabled: true
   base_strategies:
   - TitForTatExtended
   - AlwaysDefect

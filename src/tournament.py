@@ -3,10 +3,14 @@ import copy
 import networkx as nx
 from src.config import TournamentConfig
 from src.logger import setup_logger
-from src.strategies import AlwaysCooperate, AlwaysDefect, RandomStrategy, TitForTatExtended, Grudger, Joss, TitForTwoTats, HumanStrategy, MetaAgent
-from src.agents import QLearningAgent, LLMAgent
+from src.strategies.basic import AlwaysCooperate, AlwaysDefect, RandomStrategy
+from src.strategies.reactive import TitForTatExtended, Grudger, Joss, TitForTwoTats, HumanStrategy
+from src.agents.learning import QLearningAgent
+from src.agents.meta import MetaAgent
+from src.agents.llm.remote import RemoteLLMAgent
+from src.agents.llm.local import LocalLLMAgent
 
-# Mapping strategy names to classes.
+# Mapping strategy names to classes or factory functions
 STRATEGY_MAP = {
     "AlwaysCooperate": AlwaysCooperate,
     "AlwaysDefect": AlwaysDefect,
@@ -17,7 +21,8 @@ STRATEGY_MAP = {
     "TitForTwoTats": TitForTwoTats,
     "HumanStrategy": HumanStrategy,
     "QLearningAgent": QLearningAgent,
-    "LLMAgent": LLMAgent,
+    "RemoteLLMAgent": RemoteLLMAgent,
+    "LocalLLMAgent": LocalLLMAgent,
     "MetaAgent": MetaAgent
 }
 
@@ -58,6 +63,13 @@ class Match:
         self.update_dynamic_payoffs(global_coop_rate)
         self.p1.reset()
         self.p2.reset()
+        
+        # Pass payoff matrix to LLM agents if they support it
+        if hasattr(self.p1, 'payoff_matrix'):
+            self.p1.payoff_matrix = self.payoffs
+        if hasattr(self.p2, 'payoff_matrix'):
+            self.p2.payoff_matrix = self.payoffs
+        
         p1_total = 0
         p2_total = 0
 
@@ -89,7 +101,29 @@ class Match:
                 else:
                     self.p2.record(m2, m1)
 
-            self.logger.debug(f"Round {r+1}: {self.p1} played {m1}, {self.p2} played {m2}. Rewards: {reward1}, {reward2}")
+            # Store rewards for LLM agents
+            if hasattr(self.p1, 'round_rewards'):
+                if not hasattr(self.p1, 'round_rewards'):
+                    self.p1.round_rewards = []
+                self.p1.round_rewards.append(reward1)
+                
+            if hasattr(self.p2, 'round_rewards'):
+                if not hasattr(self.p2, 'round_rewards'):
+                    self.p2.round_rewards = []
+                self.p2.round_rewards.append(reward2)
+                
+            # For reward_visibility="both" scenario
+            if hasattr(self.p1, 'opponent_rewards'):
+                if not hasattr(self.p1, 'opponent_rewards'):
+                    self.p1.opponent_rewards = []
+                self.p1.opponent_rewards.append(reward2)
+                
+            if hasattr(self.p2, 'opponent_rewards'):
+                if not hasattr(self.p2, 'opponent_rewards'):
+                    self.p2.opponent_rewards = []
+                self.p2.opponent_rewards.append(reward1)
+
+            self.logger.debug(f"Round {r+1}: {self.p1} played {m1}, {self.p2} played {m2}. Rewards: {reward1, reward2}")
 
         # Update reputation after the match.
         if hasattr(self.p1, "update_reputation"):
@@ -102,15 +136,14 @@ class Match:
 class Tournament:
     def __init__(self, config: TournamentConfig):
         self.config = config
-        self.logger = setup_logger(self.config.logging.log_file, self.config.logging.verbose)
+        self.logger = setup_logger(config.logging.log_file, config.logging.verbose)
         self.players = self.create_players()
-        self.scores = {str(player): 0 for player in self.players}
-        self.match_results = []
-        # Build a network if enabled.
-        if self.config.network.enabled:
-            self.graph = self.build_network(len(self.players), self.config.network)
+        if config.network.enabled:
+            self.graph = self.build_network(len(self.players), config.network)
         else:
             self.graph = None
+        self.scores = {str(player): 0 for player in self.players}
+        self.match_results = []
 
     def create_players(self):
         players = []
@@ -118,19 +151,24 @@ class Tournament:
             if strat_name not in STRATEGY_MAP:
                 self.logger.warning(f"Unknown strategy {strat_name} in config; skipping.")
                 continue
+                
             if strat_name == "QLearningAgent":
                 params = self.config.rl_params.dict()
                 player = STRATEGY_MAP[strat_name](**params)
-            elif strat_name == "LLMAgent":
-                params = self.config.llm_params.dict()
+            elif strat_name == "RemoteLLMAgent":
+                params = self.config.remote_llm_params.dict()
+                player = STRATEGY_MAP[strat_name](**params)
+            elif strat_name == "LocalLLMAgent":
+                params = self.config.local_llm_params.dict() 
                 player = STRATEGY_MAP[strat_name](**params)
             elif strat_name == "Joss":
                 player = STRATEGY_MAP[strat_name](defect_prob=0.1)
             elif strat_name == "MetaAgent":
                 params = self.config.meta_agent.dict()
-                player = STRATEGY_MAP[strat_name](base_strategy_names=params["base_strategies"], switch_frequency=params["switch_frequency"])
+                player = STRATEGY_MAP[strat_name](**params)
             else:
                 player = STRATEGY_MAP[strat_name]()
+            
             players.append(player)
         return players
 

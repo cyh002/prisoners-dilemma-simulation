@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 
 class PayoffMatrix(BaseModel):
     CC: int = Field(..., description="Payoff for mutual cooperation")
@@ -14,13 +14,30 @@ class RLParams(BaseModel):
 
 class LLMParams(BaseModel):
     use_api: bool = False
-    api_key: str = ""
+    provider: str = "local"
     model: str = "local_model"
     temperature: float = 0.5
     extended_prompt: bool = True
+    reward_visibility: str = "none"  # Options: "none", "self", "both"
+
+class RemoteLLMParams(BaseModel):
+    use_api: bool = True
+    provider: str = "openai"
+    model: str = "gpt-3.5-turbo"
+    temperature: float = 0.5
+    extended_prompt: bool = True
+    reward_visibility: str = "none"  # Options: "none", "self", "both"
+    # Make api_base optional by using Optional[str]
+    api_base: Optional[str] = None
+
+class LocalLLMParams(BaseModel):
+    model: str = "SeaLLMs/SeaLLMs-v3-1.5B"
+    endpoint: str = "http://localhost:8000"
+    temperature: float = 0.5
+    extended_prompt: bool = True
+    reward_visibility: str = "none"  # Options: "none", "self", "both"
 
 class MetaAgentParams(BaseModel):
-    enabled: bool = True
     base_strategies: List[str] = ["TitForTatExtended", "AlwaysDefect", "RandomStrategy"]
     switch_frequency: int = 50
 
@@ -37,7 +54,7 @@ class GUIConfig(BaseModel):
     enabled: bool = True
 
 class TournamentConfig(BaseModel):
-    strategies: List[str] = ["AlwaysCooperate", "AlwaysDefect", "RandomStrategy", "TitForTatExtended", "Grudger", "Joss", "TitForTwoTats", "QLearningAgent", "LLMAgent", "HumanStrategy", "MetaAgent"]
+    strategies: List[str] = ["AlwaysCooperate", "AlwaysDefect", "RandomStrategy"]
     rounds: int = 200
     rounds_random: bool = False
     min_rounds: int = 150
@@ -50,7 +67,10 @@ class TournamentConfig(BaseModel):
     shock_duration: int = 20
     reputation_weight: float = 0.5
     rl_params: RLParams
-    llm_params: LLMParams
+    # Make llm_params optional with a default value
+    llm_params: LLMParams = LLMParams()
+    remote_llm_params: RemoteLLMParams
+    local_llm_params: LocalLLMParams
     meta_agent: MetaAgentParams
     network: NetworkParams
     logging: LoggingConfig

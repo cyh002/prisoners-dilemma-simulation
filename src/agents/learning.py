@@ -1,5 +1,5 @@
 import random
-from src.strategies import Strategy
+from src.strategies.base import Strategy
 
 class QLearningAgent(Strategy):
     def __init__(self, learning_rate=0.1, discount_factor=0.9, exploration_rate=0.2):
@@ -47,39 +47,3 @@ class QLearningAgent(Strategy):
         super().reset()
         self.last_state = None
         self.last_action = None
-
-class LLMAgent(Strategy):
-    def __init__(self, use_api=False, model="local_model", temperature=0.5, extended_prompt=True):
-        super().__init__("LLMAgent")
-        self.use_api = use_api
-        self.api_key = None  # Would be set if using API
-        self.model = model
-        self.temperature = temperature
-        self.extended_prompt = extended_prompt
-
-    def move(self) -> str:
-        prompt = self.build_prompt()
-        decision = self.get_llm_decision(prompt)
-        return decision
-
-    def build_prompt(self) -> str:
-        rounds = len(self.my_history)
-        rep = f" (reputation: {self.reputation:.2f})"  if self.reputation else ""
-        if rounds == 0:
-            return f"No history. Please choose C or D.{rep}"
-        history = f"Your moves: {','.join(self.my_history)}; Opponent moves: {','.join(self.opponent_history)}."
-        if self.extended_prompt:
-            prompt = f"You are playing Iterated Prisoner's Dilemma. {history} Your current reputation is {self.reputation:.2f}. Based on this, decide whether to cooperate (C) or defect (D)."
-        else:
-            prompt = f"{history} Decide C or D."
-        return prompt
-
-    def get_llm_decision(self, prompt: str) -> str:
-        # In a real system, call the API or local HuggingFace model.
-        # For simulation: if opponent defected last round, defect; else cooperate.
-        if not self.opponent_history:
-            return "C"
-        return "D" if self.opponent_history[-1] == "D" else "C"
-
-    def record(self, my_move: str, opp_move: str):
-        super().record(my_move, opp_move)

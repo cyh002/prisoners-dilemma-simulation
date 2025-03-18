@@ -9,12 +9,13 @@ strategies:
   - Grudger
   - Joss
   - TitForTwoTats
-  - QLearningAgent1
-  # - LLMAgent
-  - HumanStrategy
-  - MetaAgent  # a meta strategy that can choose among multiple base strategies
+  - QLearningAgent
+  # - RemoteLLMAgent
+  - LocalLLMAgent  
+ # - HumanStrategy
+  - MetaAgent
 
-rounds: 200
+rounds: 10
 rounds_random: false
 min_rounds: 150
 max_rounds: 250
@@ -28,11 +29,11 @@ payoff_matrix:
   DD: 1
 dynamic_payoffs: true   # When true, payoffs will update based on global cooperation rate.
 
-noise: 0.10 # Noise level (probability of a mistake in the agent's decision)
+noise: 0.05 # Noise level (probability of a mistake in the agent's decision)
 
 # Frequency of shock events (chance per round) that temporarily double the noise.
-shock_frequency: 0.02
-shock_duration: 20
+shock_frequency: 0.02 # probability of a shock event in a round
+shock_duration: 20 # duration of the shock event in rounds
 
 # Reputation parameters (how much weight reputation has when updating decisions)
 reputation_weight: 0.5
@@ -42,15 +43,23 @@ rl_params:
   discount_factor: 0.9
   exploration_rate: 0.2
 
-llm_params:
-  use_api: false
-  api_key: ""
-  model: "local_model"
+remote_llm_params:
+  use_api: true
+  provider: "openai"
+  model: "gpt-4o-mini"
   temperature: 0.5
   extended_prompt: true
+  reward_visibility: "both"  # Options: "none", "self", "both"
+  api_base: null
+
+local_llm_params:
+  model: "SeaLLMs/SeaLLMs-v3-1.5B-Chat"
+  endpoint: "http://localhost:8000"
+  temperature: 0.5
+  extended_prompt: true
+  reward_visibility: "both"  # Options: "none", "self", "both"
 
 meta_agent:
-  enabled: true
   base_strategies: ["TitForTatExtended", "AlwaysDefect", "RandomStrategy"]
   switch_frequency: 50   # rounds between meta decision updates
 

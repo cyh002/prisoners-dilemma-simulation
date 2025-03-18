@@ -2,3 +2,10 @@
 *.csv
 *.log
 src/__pycache__/*
+*_to_delete_*
+tmp/*
+src/agents/__pycache__/*
+src/llm/__pycache__/*
+src/strategies/__pycache__/*
+src/agents/__pycache__/*
+src/agents/llm/__pycache__/*
