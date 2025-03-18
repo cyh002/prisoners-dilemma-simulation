@@ -1,0 +1,52 @@
+strategies:
+- AlwaysCooperate
+- AlwaysDefect
+- RandomStrategy
+- TitForTatExtended
+- Grudger
+- Joss
+- TitForTwoTats
+- QLearningAgent1
+- HumanStrategy
+- MetaAgent
+rounds: 200
+rounds_random: false
+min_rounds: 150
+max_rounds: 250
+shadow_probability: 0
+payoff_matrix:
+  CC: 3
+  CD: 0
+  DC: 5
+  DD: 1
+dynamic_payoffs: true
+noise: 0.2
+shock_frequency: 0.02
+shock_duration: 20
+reputation_weight: 0.5
+rl_params:
+  learning_rate: 0.1
+  discount_factor: 0.9
+  exploration_rate: 0.2
+llm_params:
+  use_api: false
+  api_key: ''
+  model: local_model
+  temperature: 0.5
+  extended_prompt: true
+meta_agent:
+  enabled: true
+  base_strategies:
+  - TitForTatExtended
+  - AlwaysDefect
+  - RandomStrategy
+  switch_frequency: 50
+network:
+  enabled: true
+  type: random
+  connectivity: 0.5
+logging:
+  log_file: tournament.log
+  verbose: true
+gui:
+  enabled: true
